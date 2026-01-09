@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Attendance Report</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <style>
+    :root {
+      --primary: #0a4d68;
+      --secondary: #088395;
+      --accent: #05bfdb;
+      --light: #e1f7f5;
+      --dark: #003638;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7f8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1150px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    @media print {
+      .no-print { display: none; }
+      body { background: white; }
+      .container { box-shadow: none; width: 100%; margin: 0; padding: 10px; }
+    }
+
+    .report-header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 10px;
+      border-bottom: 4px solid var(--primary);
+    }
+
+    .report-header h2 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 28px;
+    }
+
+    .subtitle {
+      font-size: 1.1em;
+      color: #555;
+      margin-top: 5px;
+    }
+
+    /* Summary Cards */
+    .summary-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .summary-card {
+      flex: 1;
+      min-width: 180px;
+      background: var(--light);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      border-left: 5px solid var(--primary);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.07);
+    }
+
+    .summary-card h3 {
+      margin-top: 0;
+      color: var(--secondary);
+      font-size: 14px;
+    }
+
+    .summary-card .count {
+      font-size: 2em;
+      font-weight: bold;
+      color: var(--dark);
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin: 8px 0;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      font-size: 14px;
+    }
+
+    table th {
+      background: var(--primary);
+      color: white;
+      padding: 12px;
+      text-align: left;
+    }
+
+    table td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    /* Status Colors */
+    .status-present { color: #27ae60; font-weight: bold; }
+    .status-absent { color: #e74c3c; font-weight: bold; }
+    .status-late   { color: #f39c12; font-weight: bold; }
+
+    /* Summary Footer */
+    .report-summary {
+      margin-top: 30px;
+      padding: 15px;
+      background: var(--light);
+      border-left: 5px solid var(--primary);
+      border-radius: 8px;
+      font-size: 0.95em;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div class="report-header">
+      <h2>Daily Attendance Report</h2>
+      <div class="subtitle">Date: {{ date }}</div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card">
+        <h3>Total Employees</h3>
+        <div class="count">{{ attendance_data|length }}</div>
+      </div>
+      <div class="summary-card">
+        <h3>Present</h3>
+        <div class="count">
+          {{ attendance_data|selectattr('status','equalto','Present')|list|length }}
+        </div>
+      </div>
+      <div class="summary-card">
+        <h3>Absent</h3>
+        <div class="count">
+          {{ attendance_data|selectattr('status','equalto','Absent')|list|length }}
+        </div>
+      </div>
+      <div class="summary-card">
+        <h3>Late</h3>
+        <div class="count">
+          {{ attendance_data|selectattr('status','equalto','Late')|list|length }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="no-print">
+      <button onclick="window.print()" class="btn btn-primary">Print Report</button>
+      <button onclick="window.history.back()" class="btn btn-secondary">Back</button>
+    </div>
+
+    <!-- Table -->
+    <table>
+      <thead>
+        <tr>
+          <th>Employee Name</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for record in attendance_data %}
+        <tr>
+          <td>{{ record.name }}</td>
+          <td>{{ record.department }}</td>
+          <td>{{ record.position }}</td>
+          <td>
+            {% if record.status == 'Present' %}
+              <span class="status-present">Present</span>
+            {% elif record.status == 'Absent' %}
+              <span class="status-absent">Absent</span>
+            {% elif record.status == 'Late' %}
+              <span class="status-late">Late</span>
+            {% else %}
+              {{ record.status }}
+            {% endif %}
+          </td>
+          <td>{{ record.date }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align:center; color:#555;">
+            No attendance records found for this date.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Summary Footer -->
+    <div class="report-summary">
+      <strong>Report Summary:</strong>
+      {{ attendance_data|length }} total employees,
+      {{ attendance_data|selectattr('status','equalto','Present')|list|length }} present,
+      {{ attendance_data|selectattr('status','equalto','Absent')|list|length }} absent,
+      {{ attendance_data|selectattr('status','equalto','Late')|list|length }} late.
+    </div>
+  </div>
+</body>
+</html>

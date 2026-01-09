@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payroll | Jedidiah Construction</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <style>
+    /* Payroll-specific styles */
+    .payroll-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+
+    .summary-card {
+      flex: 1;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      min-width: 220px;
+      text-align: center;
+    }
+
+    .summary-card h3 {
+      color: var(--primary);
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    .summary-card p {
+      color: var(--secondary);
+      font-size: 14px;
+    }
+
+    /* Modal UI Enhancement */
+    #addPayrollModal .modal-content {
+      width: 480px;
+      background: linear-gradient(to bottom right, #ffffff, #f7fdfd);
+      border-top: 5px solid var(--primary);
+    }
+
+    #addPayrollModal h2 {
+      color: var(--primary);
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .modal .form-group label {
+      color: var(--gray-800);
+      font-weight: 600;
+    }
+
+    .total-display {
+      text-align: right;
+      margin-top: 10px;
+      font-weight: bold;
+      color: var(--primary-dark);
+    }
+
+    .status-badge {
+      padding: 5px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .status-paid { background: var(--success); }
+    .status-pending { background: var(--warning); }
+    .status-processing { background: var(--accent); }
+
+    .alert {
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .alert-danger {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .alert-info {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+.user {
+position: relative;
+cursor: pointer;
+}
+.user-dropdown {
+position: absolute;
+top: 100%;
+right: 0;
+background: white;
+padding: 10px;
+border-radius: 6px;
+box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+display: none;
+}
+.user-dropdown.show {
+display: block;
+}
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='images/nologo.png') }}" alt="Company Logo" class="nologo-img"> 
+      <h2>Jedidiah Construction</h2>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+        {% set role = (session.get('role', 'EMPLOYEE') | upper) %}
+        {% if role in ['ADMIN', 'MANAGER', 'ASSISTANT MANAGER'] %}
+        <li><a href="{{ url_for('employees') }}"><i class="fas fa-users"></i><span>Employees</span></a></li>
+        <li><a href="{{ url_for('projects') }}"><i class="fas fa-layer-group"></i><span>Projects</span></a></li>
+        <li><a href="{{ url_for('attendance') }}"><i class="fas fa-calendar-check"></i><span>Attendance</span></a></li>
+        <li><a href="{{ url_for('payroll') }}" class="active"><i class="fas fa-wallet"></i><span>Payroll</span></a></li>
+        <li><a href="{{ url_for('payroll_overview') }}"><i class="fas fa-chart-line"></i><span>Project Cost Tracking</span></a></li>
+        <li><a href="{{ url_for('reports') }}"><i class="fas fa-chart-pie"></i><span>Reports</span></a></li>
+        {% elif role == 'EMPLOYEE' %}
+        <li><a href="{{ url_for('employees') }}"><i class="fas fa-id-badge"></i><span>My Info</span></a></li>
+        <li><a href="{{ url_for('projects') }}"><i class="fas fa-layer-group"></i><span>Projects Assigned</span></a></li>
+        <li><a href="{{ url_for('payroll') }}" class="active"><i class="fas fa-wallet"></i><span>Payroll Status</span></a></li>
+        <li><a href="{{ url_for('attendance') }}"><i class="fas fa-calendar-check"></i><span>My Attendance</span></a></li>
+        {% endif %}
+        {% if role == 'ADMIN' %}
+        <li><a href="{{ url_for('admin_settings') }}"><i class="fas fa-user-shield"></i><span>Admin Settings</span></a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="search">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search employees...">
+      </div>
+      <div class="top-actions">
+        <div class="notification">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div class="user">
+          <img src="https://ui-avatars.com/api/?name={{ username if username else 'Manager' }}&background=008080&color=fff" alt="User">
+          <span>{{ username if username else "Manager" }}</span>
+          <i class="fas fa-chevron-down"></i>
+  
+          <!-- Dropdown Menu -->
+          <div class="user-dropdown">
+            <a href="{{ url_for('logout') }}">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+
+      <div class="page-title">
+        <h2>Payroll Management</h2>
+        {% set role = (session.get('role', 'EMPLOYEE') | upper) %}
+        {% if role in ['ADMIN', 'MANAGER', 'ASSISTANT MANAGER'] %}
+        <button class="btn btn-primary" id="addPayrollBtn"><i class="fas fa-plus"></i> Add Payroll</button>
+        {% endif %}
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="payroll-summary">
+        <div class="summary-card">
+          <h3>₱{{ "{:,.2f}".format(summary.total_gross_pay or 0) }}</h3>
+          <p>Total Gross Pay</p>
+        </div>
+        <div class="summary-card">
+          <h3>₱{{ "{:,.2f}".format(summary.total_deductions or 0) }}</h3>
+          <p>Total Deductions</p>
+        </div>
+        <div class="summary-card">
+          <h3>₱{{ "{:,.2f}".format(summary.total_net_pay or 0) }}</h3>
+          <p>Total Net Pay</p>
+        </div>
+        <div class="summary-card">
+          <h3>{{ summary.employees_paid or 0 }}</h3>
+          <p>Employees Paid</p>
+        </div>
+      </div>
+
+      <!-- Payroll Table -->
+      <div class="table-container">
+        <div class="table-header">
+          <h2>Payroll Records</h2>
+        </div>
+        <table id="payrollTable">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Position</th>
+              <th>Project</th>
+              <th>Pay Period</th>
+              <th>Basic Salary</th>
+              <th>Overtime</th>
+              <th>Deductions</th>
+              <th>Net Pay</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if payroll_records %}
+              {% for record in payroll_records %}
+              <tr>
+                <td>{{ record.name }}</td>
+                <td>{{ record.position }}</td>
+                <td>{{ record.project_name or 'No Project' }}</td>
+                <td>{{ record.pay_period_start }} to {{ record.pay_period_end }}</td>
+                <td>₱{{ "{:,.2f}".format(record.basic_salary) }}</td>
+                <td>₱{{ "{:,.2f}".format(record.overtime or 0) }}</td>
+                <td>₱{{ "{:,.2f}".format(record.deductions or 0) }}</td>
+                <td><strong>₱{{ "{:,.2f}".format(record.net_pay) }}</strong></td>
+                <td><span class="status-badge status-{{ record.status|lower|replace(' ', '-') }}">{{ record.status }}</span></td>
+                <td class="action-buttons">
+                  {% set role = (session.get('role', 'EMPLOYEE') | upper) %}
+                  {% if role in ['ADMIN', 'MANAGER', 'ASSISTANT MANAGER'] %}
+                  <a href="#" class="btn-icon edit-btn" data-id="{{ record.id }}" data-bs-toggle="modal"  data-bs-target="#editPayrollModal">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <form action="{{ url_for('delete_payroll', id=record.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn-icon delete" onclick="return confirm('Are you sure you want to delete this payroll record?');">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                  {% else %}
+                  <span style="font-size: 12px; color: var(--secondary);">View only</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="10" style="text-align: center; padding: 20px;">
+                  No payroll records found. Add your first payroll record!
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Payroll Modal -->
+  <div class="modal" id="addPayrollModal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Add Payroll Record</h2>
+      <form method="POST" action="{{ url_for('add_payroll') }}" id="payrollForm">
+        <div class="form-group">
+          <label>Employee</label>
+          <select name="employee_id" id="employee_id" class="form-control" required>
+            <option value="">Select Employee</option>
+            {% for emp in employees %}
+            <option value="{{ emp.id }}" data-position="{{ emp.position }}">{{ emp.name }} - {{ emp.position }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Project <span style="color: var(--secondary); font-size: 12px;">(Optional - for project cost tracking)</span></label>
+          <select name="project_id" id="project_id" class="form-control">
+            <option value="">No Project</option>
+            {% for project in projects %}
+            <option value="{{ project.id }}">{{ project.project_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pay Period Start</label>
+          <input type="date" name="pay_period_start" id="pay_period_start" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Pay Period End</label>
+          <input type="date" name="pay_period_end" id="pay_period_end" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Basic Salary (₱)</label>
+          <input type="number" name="basic_salary" id="basicSalary" step="0.01" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Overtime (₱)</label>
+          <input type="number" name="overtime" id="overtime" step="0.01" class="form-control" value="0">
+        </div>
+        <div class="form-group">
+          <label>Deductions (₱)</label>
+          <input type="number" name="deductions" id="deductions" step="0.01" class="form-control" value="0">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status" class="form-control">
+            <option value="Pending">Pending</option>
+            <option value="Paid">Paid</option>
+            <option value="Processing">Processing</option>
+          </select>
+        </div>
+        <div class="total-display">Net Pay: ₱<span id="totalPay">0.00</span></div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Payroll</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="editPayrollModal">
+    <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Edit Payroll Record</h2>
+    <form method="POST" action="{{ url_for('edit_payroll') }}" id="editPayrollForm">
+    <input type="hidden" name="id" id="edit_id">
+    
+    
+    <div class="form-group">
+    <label>Employee</label>
+    <select name="employee_id" id="edit_employee_id" class="form-control" required>
+    <option value="">Select Employee</option>
+    {% for emp in employees %}
+    <option value="{{ emp.id }}">{{ emp.name }} - {{ emp.position }}</option>
+    {% endfor %}
+    </select>
+    </div>
+    
+    
+    <div class="form-group">
+    <label>Project <span style="color: var(--secondary); font-size: 12px;">(Optional)</span></label>
+    <select name="project_id" id="edit_project_id" class="form-control">
+    <option value="">No Project</option>
+    {% for project in projects %}
+    <option value="{{ project.id }}">{{ project.project_name }}</option>
+    {% endfor %}
+    </select>
+    </div>
+    
+    
+    <div class="form-group">
+    <label>Pay Period Start</label>
+    <input type="date" name="pay_period_start" id="edit_pay_period_start" class="form-control" required>
+    </div>
+    <div class="form-group">
+    <label>Pay Period End</label>
+    <input type="date" name="pay_period_end" id="edit_pay_period_end" class="form-control" required>
+    </div>
+    
+    
+    <div class="form-group">
+    <label>Basic Salary (₱)</label>
+    <input type="number" name="basic_salary" id="edit_basic_salary" step="0.01" class="form-control" required>
+    </div>
+    <div class="form-group">
+    <label>Overtime (₱)</label>
+    <input type="number" name="overtime" id="edit_overtime" step="0.01" class="form-control" value="0">
+    </div>
+    <div class="form-group">
+    <label>Deductions (₱)</label>
+    <input type="number" name="deductions" id="edit_deductions" step="0.01" class="form-control" value="0">
+    </div>
+    
+    
+    <div class="form-group">
+    <label>Status</label>
+    <select name="status" id="edit_status" class="form-control">
+    <option value="Pending">Pending</option>
+    <option value="Paid">Paid</option>
+    <option value="Processing">Processing</option>
+    </select>
+    </div>
+    
+    
+    <div class="total-display">Net Pay: ₱<span id="edit_totalPay">0.00</span></div>
+    <div class="form-actions">
+    <button type="button" class="btn btn-secondary" id="editCancelBtn">Cancel</button>
+    <button type="submit" class="btn btn-primary">Update Payroll</button>
+    </div>
+    </form>
+    </div>
+    </div>
+
+  <script>
+    // Payroll Modal Logic
+    const modal = document.getElementById('addPayrollModal');
+    const addBtn = document.getElementById('addPayrollBtn');
+    const closeBtn = modal.querySelector('.close');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const totalPay = document.getElementById('totalPay');
+
+    addBtn.onclick = () => modal.style.display = 'flex';
+    closeBtn.onclick = () => modal.style.display = 'none';
+    cancelBtn.onclick = () => modal.style.display = 'none';
+
+    window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+
+    // Auto-calculate Net Pay
+    const salaryInput = document.getElementById('basicSalary');
+    const overtimeInput = document.getElementById('overtime');
+    const deductionInput = document.getElementById('deductions');
+
+    [salaryInput, overtimeInput, deductionInput].forEach(input => {
+      input.addEventListener('input', () => {
+        const salary = parseFloat(salaryInput.value) || 0;
+        const overtime = parseFloat(overtimeInput.value) || 0;
+        const deduction = parseFloat(deductionInput.value) || 0;
+        const total = salary + overtime - deduction;
+        totalPay.textContent = total.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+      });
+    });
+
+    const editModal = document.getElementById('editPayrollModal');
+const closeEditBtn = editModal.querySelector('.close');
+const cancelEditBtn = document.getElementById('editCancelBtn');
+const editTotalPay = document.getElementById('edit_totalPay');
+
+
+closeEditBtn.onclick = () => editModal.style.display = 'none';
+cancelEditBtn.onclick = () => editModal.style.display = 'none';
+window.onclick = e => { if (e.target === editModal) editModal.style.display = 'none'; };
+
+
+// Populate modal fields with existing data
+document.querySelectorAll('.edit-btn').forEach(button => {
+  button.addEventListener('click', async e => {
+    const id = e.currentTarget.getAttribute('data-id');
+
+    try {
+      const response = await fetch(`/get_payroll/${id}`);
+      const data = await response.json();
+
+      if (data.error) {
+        alert('Payroll record not found.');
+        return;
+      }
+
+      // Fill modal form
+      document.getElementById('edit_id').value = data.id;
+      document.getElementById('edit_employee_id').value = data.employee_id;
+      document.getElementById('edit_project_id').value = data.project_id || '';
+      document.getElementById('edit_pay_period_start').value = data.pay_period_start;
+      document.getElementById('edit_pay_period_end').value = data.pay_period_end;
+      document.getElementById('edit_basic_salary').value = data.basic_salary;
+      document.getElementById('edit_overtime').value = data.overtime;
+      document.getElementById('edit_deductions').value = data.deductions;
+      document.getElementById('edit_status').value = data.status;
+
+      const total = (parseFloat(data.basic_salary) || 0) + (parseFloat(data.overtime) || 0) - (parseFloat(data.deductions) || 0);
+      document.getElementById('edit_totalPay').textContent = total.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+
+      document.getElementById('editPayrollModal').style.display = 'flex';
+    } catch (err) {
+      alert('Error loading payroll record.');
+      console.error(err);
+    }
+  });
+});
+const userMenu = document.querySelector('.user');
+const dropdown = document.querySelector('.user-dropdown');
+
+userMenu.addEventListener('click', (e) => {
+  e.stopPropagation(); 
+  dropdown.classList.toggle('show');
+});
+
+// Close when clicking outside
+window.addEventListener('click', () => {
+  dropdown.classList.remove('show');
+});
+
+
+  </script>
+</body>
+</html>

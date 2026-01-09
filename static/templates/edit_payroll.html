@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Payroll | Jedidiah Construction</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='images/nologo.png') }}" alt="Company Logo" class="nologo-img"> 
+      <h2>Jedidiah Construction</h2>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+        <li><a href="{{ url_for('employees') }}"><i class="fas fa-users"></i><span>Employees</span></a></li>
+        <li><a href="{{ url_for('projects') }}"><i class="fas fa-layer-group"></i><span>Projects</span></a></li>
+        <li><a href="{{ url_for('attendance') }}"><i class="fas fa-calendar-check"></i><span>Attendance</span></a></li>
+        <li><a href="{{ url_for('payroll') }}" class="active"><i class="fas fa-wallet"></i><span>Payroll</span></a></li>
+        <li><a href="{{ url_for('payroll_overview') }}"><i class="fas fa-chart-line"></i><span>Project Cost Tracking</span></a></li>
+        <li><a href="{{ url_for('reports') }}"><i class="fas fa-chart-pie"></i><span>Reports</span></a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="search">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search...">
+      </div>
+      <div class="top-actions">
+        <div class="notification"><i class="fas fa-bell"></i></div>
+        <div class="user">
+          <img src="https://ui-avatars.com/api/?name={{ username if username else 'Manager' }}&background=008080&color=fff" alt="User">
+          <span>{{ username if username else 'Manager' }}</span>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <div class="page-title">
+        <h2>Edit Payroll Record</h2>
+        <a href="{{ url_for('payroll') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Payroll</a>
+      </div>
+
+      <div class="table-container">
+        <form method="POST" action="{{ url_for('edit_payroll', id=payroll_record.id) }}">
+          <div class="form-group">
+            <label>Employee</label>
+            <select name="employee_id" class="form-control" required>
+              {% for emp in employees %}
+              <option value="{{ emp.id }}" {% if payroll_record.employee_id == emp.id %}selected{% endif %}>
+                {{ emp.name }} - {{ emp.position }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Project <span style="color: var(--secondary); font-size: 12px;">(Optional - for project cost tracking)</span></label>
+            <select name="project_id" class="form-control">
+              <option value="">No Project</option>
+              {% for project in projects %}
+              <option value="{{ project.id }}" {% if payroll_record.project_id == project.id %}selected{% endif %}>
+                {{ project.project_name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Pay Period Start</label>
+            <input type="date" name="pay_period_start" class="form-control" value="{{ payroll_record.pay_period_start }}" required>
+          </div>
+          <div class="form-group">
+            <label>Pay Period End</label>
+            <input type="date" name="pay_period_end" class="form-control" value="{{ payroll_record.pay_period_end }}" required>
+          </div>
+          <div class="form-group">
+            <label>Position</label>
+            <input type="text" name="position" class="form-control" value="{{ payroll_record.position or '' }}">
+          </div>
+          <hr style="margin: 15px 0;">
+          <h3 style="font-size: 14px; margin-bottom: 10px;">Allowances</h3>
+          <div class="form-group">
+            <label>Daily Rate (₱)</label>
+            <input type="number" name="daily_rate" id="edit_daily_rate" step="0.01" class="form-control" value="{{ payroll_record.daily_rate or 0 }}">
+          </div>
+          <div class="form-group">
+            <label>Meal (₱)</label>
+            <input type="number" name="meal" id="edit_meal" step="0.01" class="form-control" value="{{ payroll_record.meal or 0 }}">
+          </div>
+          <div class="form-group">
+            <label>Transpo (₱)</label>
+            <input type="number" name="transpo" id="edit_transpo" step="0.01" class="form-control" value="{{ payroll_record.transpo or 0 }}">
+          </div>
+          <div class="form-group">
+            <label>Days Worked</label>
+            <input type="number" name="days_worked" id="edit_days_worked" step="1" class="form-control" value="{{ payroll_record.days_worked or 0 }}">
+          </div>
+          <hr style="margin: 15px 0;">
+          <h3 style="font-size: 14px; margin-bottom: 10px;">Overtime</h3>
+          <div class="form-group">
+            <label>Total OT Hours</label>
+            <input type="number" name="total_ot_hours" id="edit_total_ot_hours" step="0.01" class="form-control" value="{{ payroll_record.total_ot_hours or 0 }}">
+          </div>
+          <hr style="margin: 15px 0;">
+          <h3 style="font-size: 14px; margin-bottom: 10px;">Holiday Pay</h3>
+          <div class="form-group">
+            <label>Holiday Pay</label>
+            <input type="number" name="holiday_pay" id="edit_holiday_pay" step="0.01" class="form-control" value="{{ payroll_record.holiday_pay or 0 }}">
+          </div>
+          <div class="form-group">
+            <label>Holiday Pay Amount (₱)</label>
+            <input type="number" name="holiday_pay_amount" id="edit_holiday_pay_amount" step="0.01" class="form-control" value="{{ payroll_record.holiday_pay_amount or 0 }}">
+          </div>
+          <div class="form-group">
+            <label>Others (₱)</label>
+            <input type="number" name="others" id="edit_others" step="0.01" class="form-control" value="{{ payroll_record.others or 0 }}">
+          </div>
+          <hr style="margin: 15px 0;">
+          <h3 style="font-size: 14px; margin-bottom: 10px;">Deductions</h3>
+          <div class="form-group">
+            <label>Cash Advance (₱)</label>
+            <input type="number" name="cash_advance" id="edit_cash_advance" step="0.01" class="form-control" value="{{ payroll_record.cash_advance or 0 }}">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status" class="form-control">
+              <option value="Pending" {% if payroll_record.status == 'Pending' %}selected{% endif %}>Pending</option>
+              <option value="Paid" {% if payroll_record.status == 'Paid' %}selected{% endif %}>Paid</option>
+              <option value="Processing" {% if payroll_record.status == 'Processing' %}selected{% endif %}>Processing</option>
+            </select>
+          </div>
+          <div class="total-display">
+            <div>Total Daily Salary: ₱<span id="edit_total_daily_salary">{{ "{:,.2f}".format(payroll_record.total_daily_salary or 0) }}</span></div>
+            <div>OT Amount: ₱<span id="edit_ot_amount">{{ "{:,.2f}".format(payroll_record.ot_amount or 0) }}</span></div>
+            <div>Gross Pay: ₱<span id="edit_gross_pay">{{ "{:,.2f}".format(payroll_record.gross_pay or 0) }}</span></div>
+            <div style="font-size: 16px; font-weight: bold;">Net Pay: ₱<span id="edit_net_pay">{{ "{:,.2f}".format(payroll_record.net_pay) }}</span></div>
+          </div>
+          <div class="form-actions">
+            <a href="{{ url_for('payroll') }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Update Payroll</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Auto-calculate Excel-style payroll totals
+    function calculateEditTotals() {
+      const dailyRate = parseFloat(document.getElementById('edit_daily_rate')?.value || 0);
+      const meal = parseFloat(document.getElementById('edit_meal')?.value || 0);
+      const transpo = parseFloat(document.getElementById('edit_transpo')?.value || 0);
+      const daysWorked = parseFloat(document.getElementById('edit_days_worked')?.value || 0);
+      const totalOtHours = parseFloat(document.getElementById('edit_total_ot_hours')?.value || 0);
+      const holidayPayAmount = parseFloat(document.getElementById('edit_holiday_pay_amount')?.value || 0);
+      const others = parseFloat(document.getElementById('edit_others')?.value || 0);
+      const cashAdvance = parseFloat(document.getElementById('edit_cash_advance')?.value || 0);
+
+      // Total Daily Salary
+      const totalDailySalary = dailyRate + meal + transpo;
+      document.getElementById('edit_total_daily_salary').textContent = 
+        totalDailySalary.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+
+      // OT Amount
+      const otAmount = (dailyRate / 8) * 1.25 * totalOtHours;
+      document.getElementById('edit_ot_amount').textContent = 
+        otAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+
+      // Gross Pay
+      const grossPay = (totalDailySalary * daysWorked) + otAmount + holidayPayAmount + others;
+      document.getElementById('edit_gross_pay').textContent = 
+        grossPay.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+
+      // Net Pay
+      const netPay = grossPay - cashAdvance;
+      document.getElementById('edit_net_pay').textContent = 
+        netPay.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+    }
+
+    // Attach calculation listeners
+    ['edit_daily_rate', 'edit_meal', 'edit_transpo', 'edit_days_worked', 
+     'edit_total_ot_hours', 'edit_holiday_pay_amount', 'edit_others', 'edit_cash_advance'].forEach(id => {
+      const input = document.getElementById(id);
+      if (input) {
+        input.addEventListener('input', calculateEditTotals);
+      }
+    });
+  </script>
+</body>
+</html>
+

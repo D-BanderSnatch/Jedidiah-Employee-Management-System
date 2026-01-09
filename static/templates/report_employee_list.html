@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Employee Master List</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+
+  <style>
+    :root {
+      --primary: #0a4d68;
+      --secondary: #088395;
+      --accent: #05bfdb;
+      --light: #e1f7f5;
+      --dark: #003638;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7f8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    @media print {
+      .no-print { display: none; }
+      body { background: white; }
+      .container { box-shadow: none; }
+    }
+
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      color: var(--primary);
+      padding-bottom: 12px;
+      border-bottom: 4px solid var(--primary);
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 15px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--accent);
+      color: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    table th {
+      background: var(--primary);
+      color: white;
+      padding: 10px;
+      text-align: left;
+    }
+
+    table td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    tr:nth-child(even) {
+      background: #f8f9fa;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Employee Master List</h2>
+
+    <button onclick="window.print()" class="btn btn-primary no-print">Print</button>
+    <button onclick="window.history.back()" class="btn btn-secondary no-print">Back</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Position</th>
+          <th>Department</th>
+          <th>Status</th>
+          <th>Created At</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for e in employees %}
+        <tr>
+          <td>{{ e.name }}</td>
+          <td>{{ e.position }}</td>
+          <td>{{ e.department }}</td>
+          <td>{{ e.status }}</td>
+          <td>{{ e.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

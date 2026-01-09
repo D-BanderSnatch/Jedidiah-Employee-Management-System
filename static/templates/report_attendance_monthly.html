@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monthly Attendance Summary | Jedidiah Construction</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      background: #f4f6f8;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 25px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+    .report-header {
+      text-align: center;
+      margin-bottom: 25px;
+      border-bottom: 2px solid #e1e5ee;
+      padding-bottom: 15px;
+    }
+    .report-header h2 {
+      margin: 0;
+      color: #2c3e50;
+    }
+    .report-header .subtitle {
+      color: #7f8c8d;
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .summary-card {
+      background: #f8fafc;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      text-align: center;
+    }
+    .summary-card h3 {
+      margin: 0 0 6px;
+      font-size: 0.9rem;
+      color: #6c7a89;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .summary-card .count {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .summary-card.overall { border-left: 4px solid #3498db; }
+    .summary-card.present { border-left: 4px solid #27ae60; }
+    .summary-card.absent { border-left: 4px solid #e74c3c; }
+    .summary-card.late { border-left: 4px solid #f39c12; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: white;
+      font-size: 0.9rem;
+    }
+    table thead {
+      background: #2c3e50;
+      color: white;
+    }
+    table th, table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #ecf0f1;
+      text-align: left;
+    }
+    table tbody tr:hover {
+      background: #f8f9fa;
+    }
+    .department-header {
+      background: #34495e !important;
+      color: white;
+      font-weight: 600;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin: 5px;
+    }
+    .btn-primary { background: #3498db; color: white; }
+    .btn-secondary { background: #95a5a6; color: white; }
+    .attendance-rate { font-weight: 600; }
+    .rate-excellent { color: #27ae60; }
+    .rate-good { color: #2ecc71; }
+    .rate-fair { color: #f39c12; }
+    .rate-poor { color: #e74c3c; }
+    @media print {
+      .no-print { display: none; }
+      body { background: white; }
+      .container { box-shadow: none; padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="report-header">
+      <h2>Monthly Attendance Summary</h2>
+      <div class="subtitle">
+        Period: {{ month }} | Generated on:
+        {% if now %}{{ now.strftime('%Y-%m-%d') }}{% endif %}
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card overall">
+        <h3>Total Employees</h3>
+        <div class="count">{{ monthly_data|length }}</div>
+      </div>
+      <div class="summary-card present">
+        <h3>Avg. Present Days</h3>
+        <div class="count">
+          {% set total_present = monthly_data|sum(attribute='days_present') %}
+          {{ "%.1f"|format(total_present / monthly_data|length) if monthly_data|length > 0 else 0 }}
+        </div>
+      </div>
+      <div class="summary-card absent">
+        <h3>Avg. Absent Days</h3>
+        <div class="count">
+          {% set total_absent = monthly_data|sum(attribute='days_absent') %}
+          {{ "%.1f"|format(total_absent / monthly_data|length) if monthly_data|length > 0 else 0 }}
+        </div>
+      </div>
+      <div class="summary-card late">
+        <h3>Overall Attendance Rate</h3>
+        <div class="count">
+          {% set total_rate = monthly_data|sum(attribute='attendance_rate') %}
+          {{ "%.1f"|format(total_rate / monthly_data|length) if monthly_data|length > 0 else 0 }}%
+        </div>
+      </div>
+    </div>
+
+    <div class="no-print" style="margin-bottom:15px;">
+      <button onclick="window.print()" class="btn btn-primary">Print Report</button>
+      <button onclick="window.history.back()" class="btn btn-secondary">Back to Reports</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Employee Name</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Days Recorded</th>
+          <th>Days Present</th>
+          <th>Days Absent</th>
+          <th>Days Late</th>
+          <th>Attendance Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set current_dept = [] %}
+        {% for record in monthly_data %}
+          {% set dept = record.department or 'Unassigned' %}
+          {% if dept != (current_dept[-1] if current_dept else '') %}
+            {% set _ = current_dept.append(dept) %}
+            <tr class="department-header">
+              <td colspan="8">{{ dept }} Department</td>
+            </tr>
+          {% endif %}
+          <tr>
+            <td>{{ record.name or 'N/A' }}</td>
+            <td>{{ dept }}</td>
+            <td>{{ record.position or 'N/A' }}</td>
+            <td>{{ record.days_recorded or 0 }}</td>
+            <td>{{ record.days_present or 0 }}</td>
+            <td>{{ record.days_absent or 0 }}</td>
+            <td>{{ record.days_late or 0 }}</td>
+            <td>
+              {% if record.attendance_rate %}
+                {% set rate = record.attendance_rate %}
+                <span class="attendance-rate 
+                  {% if rate >= 90 %}rate-excellent
+                  {% elif rate >= 80 %}rate-good
+                  {% elif rate >= 70 %}rate-fair
+                  {% else %}rate-poor
+                  {% endif %}">
+                  {{ "%.1f"|format(rate) }}%
+                </span>
+              {% else %}
+                <span style="color:#7f8c8d;">No data</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8" style="text-align:center; color:#7f8c8d;">
+              No attendance data found for this month.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div style="margin-top: 25px; padding: 15px; background: #f8f9fa; border-radius: 5px; font-size: 0.9rem;">
+      <strong>Monthly Summary:</strong>
+      {{ monthly_data|length }} employees tracked |
+      Total Present Days: {{ monthly_data|sum(attribute='days_present') }} |
+      Total Absent Days: {{ monthly_data|sum(attribute='days_absent') }} |
+      Average Attendance Rate:
+      {{ "%.1f"|format(monthly_data|sum(attribute='attendance_rate') / monthly_data|length) if monthly_data|length > 0 else 0 }}%
+    </div>
+  </div>
+</body>
+</html>

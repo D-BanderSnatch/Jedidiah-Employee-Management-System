@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payroll Per Employee | Jedidiah Construction</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      background: #f4f6f8;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .report-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 25px;
+      background: white;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border-radius: 12px;
+    }
+    .report-header {
+      text-align: center;
+      margin-bottom: 25px;
+      border-bottom: 2px solid #e1e5ee;
+      padding-bottom: 15px;
+    }
+    .report-header h2 {
+      margin: 0;
+      color: #2c3e50;
+    }
+    .report-header .subtitle {
+      color: #7f8c8d;
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .summary-card {
+      background: #f8fafc;
+      padding: 18px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .summary-card h4 {
+      margin: 0;
+      color: #6c7a89;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .summary-card .value {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-top: 8px;
+    }
+    .summary-card .meta {
+      color: #95a5a6;
+      font-size: 0.85rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    table thead {
+      background: #2c3e50;
+      color: white;
+    }
+    table th, table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #ecf0f1;
+      font-size: 0.92rem;
+      text-align: left;
+    }
+    table tbody tr:hover {
+      background: #f9fbfd;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-success { background: #eafaf1; color: #27ae60; }
+    .badge-warning { background: #fff4e6; color: #f39c12; }
+    .badge-neutral { background: #f0f3f7; color: #7f8c8d; }
+    .actions {
+      margin-bottom: 20px;
+    }
+    .actions .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-right: 10px;
+    }
+    .btn-primary { background: #3498db; color: white; }
+    .btn-secondary { background: #95a5a6; color: white; }
+    .section-title {
+      margin: 35px 0 15px;
+      font-size: 1.15rem;
+      color: #2c3e50;
+      font-weight: 600;
+      border-left: 4px solid #3498db;
+      padding-left: 12px;
+    }
+    @media print {
+      body { background: white; }
+      .report-container { box-shadow: none; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+    <div class="report-header">
+      <h2>Payroll Per Employee</h2>
+      <div class="subtitle">
+        Generated on: {{ now.strftime('%Y-%m-%d %H:%M') if now else date.today().isoformat() }}
+      </div>
+    </div>
+
+    <div class="actions no-print">
+      <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+      <button class="btn btn-secondary" onclick="window.history.back()">Back to Reports</button>
+    </div>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <h4>Total Employees</h4>
+        <div class="value">{{ total_employees }}</div>
+        <div class="meta">Employees included in report</div>
+      </div>
+      <div class="summary-card">
+        <h4>Employees w/ Payroll</h4>
+        <div class="value">{{ employees_with_payroll }}</div>
+        <div class="meta">Have at least one payroll record</div>
+      </div>
+      <div class="summary-card">
+        <h4>Total Payroll Cost</h4>
+        <div class="value">₱{{ "{:,.2f}".format(total_payroll_cost or 0) }}</div>
+        <div class="meta">Sum of all employee net pays</div>
+      </div>
+      <div class="summary-card">
+        <h4>Avg Employee Pay</h4>
+        <div class="value">₱{{ "{:,.2f}".format(avg_employee_pay or 0) }}</div>
+        <div class="meta">Average net pay per employee</div>
+      </div>
+      <div class="summary-card">
+        <h4>Latest Pay Period</h4>
+        <div class="value">
+          {% if latest_pay_period %}
+            {{ latest_pay_period }}
+          {% else %}
+            <span class="badge badge-neutral">No Data</span>
+          {% endif %}
+        </div>
+        <div class="meta">Most recent payroll record</div>
+      </div>
+    </div>
+
+    <div class="section-title">Employee Payroll Summary</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Payroll Records</th>
+          <th>Total Earned</th>
+          <th>Average Pay</th>
+          <th>Latest Pay Period</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if payroll_summary %}
+          {% for row in payroll_summary %}
+            <tr>
+              <td>{{ row.name }}</td>
+              <td>{{ row.department or 'N/A' }}</td>
+              <td>{{ row.position or 'N/A' }}</td>
+              <td>{{ row.pay_records }}</td>
+              <td>₱{{ "{:,.2f}".format(row.total_earned or 0) }}</td>
+              <td>₱{{ "{:,.2f}".format(row.avg_pay or 0) }}</td>
+              <td>
+                {% if row.latest_pay_period %}
+                  {{ row.latest_pay_period }}
+                {% else %}
+                  <span class="badge badge-neutral">No Payroll Yet</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align:center; color:#7f8c8d;">No payroll data available.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <div class="section-title">Payroll Entries</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Pay Period</th>
+          <th>Basic Salary</th>
+          <th>Overtime</th>
+          <th>Deductions</th>
+          <th>Net Pay</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if payroll_entries %}
+          {% for entry in payroll_entries %}
+            <tr>
+              <td>{{ entry.name }}</td>
+              <td>{{ entry.department or 'N/A' }}</td>
+              <td>{{ entry.position or 'N/A' }}</td>
+              <td>{{ entry.pay_period_start }} to {{ entry.pay_period_end }}</td>
+              <td>₱{{ "{:,.2f}".format(entry.basic_salary or 0) }}</td>
+              <td>₱{{ "{:,.2f}".format(entry.overtime or 0) }}</td>
+              <td>₱{{ "{:,.2f}".format(entry.deductions or 0) }}</td>
+              <td>₱{{ "{:,.2f}".format(entry.net_pay or 0) }}</td>
+              <td>
+                {% if entry.status %}
+                  <span class="badge {% if entry.status.lower() == 'paid' %}badge-success{% elif entry.status.lower() == 'pending' %}badge-warning{% else %}badge-neutral{% endif %}">
+                    {{ entry.status }}
+                  </span>
+                {% else %}
+                  <span class="badge badge-neutral">Unknown</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" style="text-align:center; color:#7f8c8d;">No payroll entries found.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
