@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance | Employee Management</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='images/nologo.png') }}" alt="Company Logo" class="nologo-img"> 
+      <h2>Jedidiah Construction</h2>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+        {% set role = (session.get('role', 'EMPLOYEE') | upper) %}
+        {% if role in ['ADMIN', 'MANAGER', 'ASSISTANT MANAGER'] %}
+        <li><a href="{{ url_for('employees') }}"><i class="fas fa-users"></i><span>Employees</span></a></li>
+        <li><a href="{{ url_for('projects') }}"><i class="fas fa-layer-group"></i><span>Projects</span></a></li>
+        <li><a href="{{ url_for('attendance') }}" class="active"><i class="fas fa-calendar-check"></i><span>Attendance</span></a></li>
+        <li><a href="{{ url_for('payroll') }}"><i class="fas fa-wallet"></i><span>Payroll</span></a></li>
+        <li><a href="{{ url_for('payroll_overview') }}"><i class="fas fa-chart-line"></i><span>Project Cost Tracking</span></a></li>
+        <li><a href="{{ url_for('reports') }}"><i class="fas fa-chart-pie"></i><span>Reports</span></a></li>
+        {% elif role == 'EMPLOYEE' %}
+        <li><a href="{{ url_for('employees') }}"><i class="fas fa-id-badge"></i><span>My Info</span></a></li>
+        <li><a href="{{ url_for('projects') }}"><i class="fas fa-layer-group"></i><span>Projects Assigned</span></a></li>
+        <li><a href="{{ url_for('payroll') }}"><i class="fas fa-wallet"></i><span>Payroll Status</span></a></li>
+        <li><a href="{{ url_for('attendance') }}" class="active"><i class="fas fa-calendar-check"></i><span>My Attendance</span></a></li>
+        {% endif %}
+        {% if role == 'ADMIN' %}
+        <li><a href="{{ url_for('admin_settings') }}"><i class="fas fa-user-shield"></i><span>Admin Settings</span></a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="search">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search employees...">
+      </div>
+      <div class="top-actions">
+        <div class="notification">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div class="user">
+          <img src="https://ui-avatars.com/api/?name={{ username if username else 'Manager' }}&background=008080&color=fff" alt="User">
+          <span>{{ username if username else "Manager" }}</span>
+          <i class="fas fa-chevron-down"></i>
+  
+          <!-- Dropdown Menu -->
+          <div class="user-dropdown">
+            <a href="{{ url_for('logout') }}">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="page-title">
+        <h2>Attendance</h2>
+        <div class="actions">
+            <form action="{{ url_for('attendance') }}" method="GET" style="display: flex; gap: 10px; align-items: center;">
+                <input type="date" name="date" class="form-control" value="{{ date_today if date_today else '' }}" required>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </form>
+            {% set role = (session.get('role', 'EMPLOYEE') | upper) %}
+            {% if role in ['ADMIN', 'MANAGER', 'ASSISTANT MANAGER', 'EMPLOYEE'] %}
+            <button class="btn btn-primary" id="addAttendanceBtn">
+                <i class="fas fa-plus"></i> Add Attendance
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if attendance_records|length == 0 %}
+                <tr>
+                    <td colspan="5" style="text-align:center; padding:20px; font-size:15px; color:#888;">
+                        No attendance records for this date.
+                    </td>
+                </tr>
+            {% else %}
+                {% for a in attendance_records %}
+                <tr>
+                    <td>{{ a.name }}</td>
+                    <td>{{ a.department }}</td>
+                    <td>{{ a.date }}</td>
+                    <td><span class="status {{ a.status|lower }}">{{ a.status }}</span></td>
+                    <td class="action-buttons">
+                      {% set role = (session.get('role', 'EMPLOYEE') | upper) %}
+                      {% if role in ['ADMIN', 'MANAGER', 'ASSISTANT MANAGER'] %}
+                        <button class="btn-icon edit-btn"
+                                data-id="{{ a.id }}"
+                                data-employee-id="{{ a.employee_id }}"
+                                data-date="{{ a.date }}"
+                                data-status="{{ a.status }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+        
+                        <form method="POST" action="{{ url_for('delete_attendance', id=a.id) }}" style="display:inline;">
+                            <button class="btn-icon delete" onclick="return confirm('Are you sure?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                      {% else %}
+                        <span style="font-size:12px;color:var(--secondary);">View only</span>
+                      {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% endif %}
+        </tbody>
+        
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Attendance Modal -->
+  <div class="modal" id="addAttendanceModal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2 class="modal-title">Add Attendance</h2>
+      <form method="POST" action="{{ url_for('add_attendance') }}">
+        <div class="form-group">
+          <label>Employee</label>
+          <select name="employee_id" class="form-control" required>
+            {% for emp in employees %}
+            <option value="{{ emp.id }}">{{ emp.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+<div class="form-group">
+  <label>Date</label>
+  <input type="date" name="date" class="form-control" value="{{ date_today }}" required>
+</div>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status" class="form-control" required>
+            <option value="Present">Present</option>
+            <option value="Absent">Absent</option>
+            <option value="Half Day">Half Day</option>
+            <option value="Late">Late</option>
+            <option value="Sick Leave">Sick Leave</option>
+            <option value="Leave">Leave</option>
+            <option value="Work From Home">Work From Home</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Attendance Modal -->
+  <div class="modal" id="editAttendanceModal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2 class="modal-title">Edit Attendance</h2>
+      <form method="POST" id="editAttendanceForm">
+        <input type="hidden" name="id" id="edit-id">
+        <div class="form-group">
+          <label for="employee_id">Employee</label>
+          <select name="employee_id" id="edit-employee" class="form-control" required>
+            {% for emp in employees %}
+              <option value="{{ emp.id }}">{{ emp.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" name="date" id="edit-date" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status" id="edit-status" class="form-control" required>
+            <option value="Present">Present</option>
+            <option value="Absent">Absent</option>
+            <option value="Half Day">Half Day</option>
+            <option value="Late">Late</option>
+            <option value="Sick Leave">Sick Leave</option>
+            <option value="Leave">Leave</option>
+            <option value="Work From Home">Work From Home</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="editCancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Add Modal
+    const addModal = document.getElementById('addAttendanceModal');
+    const addBtn = document.getElementById('addAttendanceBtn');
+    const addClose = addModal.querySelector('.close');
+    const addCancel = document.getElementById('cancelBtn');
+
+    addBtn.addEventListener('click', () => addModal.style.display = 'flex');
+    addClose.addEventListener('click', () => addModal.style.display = 'none');
+    addCancel.addEventListener('click', () => addModal.style.display = 'none');
+
+    // Edit Modal
+    const editModal = document.getElementById('editAttendanceModal');
+    const editForm = document.getElementById('editAttendanceForm');
+    const editClose = editModal.querySelector('.close');
+    const editCancel = document.getElementById('editCancelBtn');
+
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('edit-id').value = btn.dataset.id;
+        document.getElementById('edit-date').value = btn.dataset.date;
+        document.getElementById('edit-status').value = btn.dataset.status;
+        document.getElementById('edit-employee').value = btn.dataset.employeeId;
+        editForm.action = `/edit_attendance/${btn.dataset.id}`;
+        editModal.style.display = 'flex';
+      });
+    });
+
+    editClose.addEventListener('click', () => editModal.style.display = 'none');
+    editCancel.addEventListener('click', () => editModal.style.display = 'none');
+
+    window.addEventListener('click', (e) => {
+      if (e.target === addModal) addModal.style.display = 'none';
+      if (e.target === editModal) editModal.style.display = 'none';
+    });
+
+    // Dropdown toggle
+    const userMenu = document.querySelector('.user');
+    const dropdown = document.querySelector('.user-dropdown');
+
+    userMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    window.addEventListener('click', (e) => {
+      if (!userMenu.contains(e.target)) dropdown.style.display = 'none';
+    });
+
+    const sidebar = document.getElementById('sidebar');
+    const toggleSidebar = document.getElementById('toggleSidebar');
+    const showSidebarBtn = document.getElementById('showSidebarBtn');
+
+    // Check localStorage for sidebar state
+    const sidebarState = localStorage.getItem('sidebarHidden');
+    if (sidebarState === 'true') {
+      sidebar.classList.add('hidden');
+      if (toggleSidebar) {
+        toggleSidebar.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        toggleSidebar.title = 'Show Sidebar';
+      }
+    }
+
+    // Toggle sidebar hide/show
+    if (toggleSidebar) {
+      toggleSidebar.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (sidebar.classList.contains('hidden')) {
+          sidebar.classList.remove('hidden');
+          toggleSidebar.innerHTML = '<i class="fas fa-chevron-left"></i>';
+          toggleSidebar.title = 'Hide Sidebar';
+          localStorage.setItem('sidebarHidden', 'false');
+        } else {
+          sidebar.classList.add('hidden');
+          toggleSidebar.innerHTML = '<i class="fas fa-chevron-right"></i>';
+          toggleSidebar.title = 'Show Sidebar';
+          localStorage.setItem('sidebarHidden', 'true');
+        }
+      });
+    }
+
+    // Show sidebar from topbar button
+    if (showSidebarBtn) {
+      showSidebarBtn.addEventListener('click', function() {
+        sidebar.classList.remove('hidden');
+        if (toggleSidebar) {
+          toggleSidebar.innerHTML = '<i class="fas fa-chevron-left"></i>';
+          toggleSidebar.title = 'Hide Sidebar';
+        }
+        localStorage.setItem('sidebarHidden', 'false');
+      });
+    }
+
+    // Date filter
+// Add this to your existing script section
+const mainDateInput = document.getElementById("attendanceDate");
+const modalDateInput = document.querySelector("#addAttendanceModal input[name='date']");
+
+// When opening the Add Modal, sync the date from the main filter
+addBtn.addEventListener('click', () => {
+    modalDateInput.value = mainDateInput.value;
+    addModal.style.display = 'flex';
+});
+
+
+  </script>
+</body>
+</html>

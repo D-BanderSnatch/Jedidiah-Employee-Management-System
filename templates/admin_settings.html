@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Settings | Jedidiah Construction</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='images/nologo.png') }}" alt="Company Logo" class="nologo-img">
+      <h2>Jedidiah Construction</h2>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i><span>Dashboard</span></a></li>
+        <li><a href="{{ url_for('employees') }}"><i class="fas fa-users"></i><span>Employees</span></a></li>
+        <li><a href="{{ url_for('projects') }}"><i class="fas fa-layer-group"></i><span>Projects</span></a></li>
+        <li><a href="{{ url_for('attendance') }}"><i class="fas fa-calendar-check"></i><span>Attendance</span></a></li>
+        <li><a href="{{ url_for('payroll') }}"><i class="fas fa-wallet"></i><span>Payroll</span></a></li>
+        <li><a href="{{ url_for('payroll_overview') }}"><i class="fas fa-chart-line"></i><span>Project Cost Tracking</span></a></li>
+        <li><a href="{{ url_for('reports') }}"><i class="fas fa-chart-pie"></i><span>Reports</span></a></li>
+        <li><a href="{{ url_for('admin_settings') }}" class="active"><i class="fas fa-user-shield"></i><span>Admin Settings</span></a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Header -->
+    <header class="topbar">
+      <div class="search">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search users...">
+      </div>
+      <div class="top-actions">
+        <div class="notification">
+          <i class="fas fa-bell"></i>
+        </div>
+        <div class="user">
+          <img src="https://ui-avatars.com/api/?name={{ username if username else 'Admin' }}&background=008080&color=fff" alt="User">
+          <span>{{ username if username else "Admin" }}</span>
+          <i class="fas fa-chevron-down"></i>
+          <div class="user-dropdown">
+            <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="page-title">
+        <h2>Admin Settings</h2>
+      </div>
+
+      <!-- Flash Messages -->
+
+
+      <div class="table-container">
+        <div class="table-header">
+          <h2>User Accounts & Roles</h2>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Change Password</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Add New User Row -->
+            <tr style="background-color: #f0f8ff;">
+              <form action="{{ url_for('add_user') }}" method="POST">
+                <td>
+                  <input type="text" name="username" class="form-control" placeholder="New username" required>
+                </td>
+                <td>
+                  <select name="account_type" class="form-control" required>
+                    <option value="Employee" selected>Employee</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="password" name="password" class="form-control" placeholder="New password" required>
+                </td>
+                <td class="action-buttons">
+                  <button type="submit" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Add User
+                  </button>
+                </td>
+              </form>
+            </tr>
+            {% for u in users %}
+            <tr>
+              <form id="update-form-{{ u.id }}" action="{{ url_for('update_user', user_id=u.id) }}" method="POST">
+                <td>
+                  <input type="text" name="username" class="form-control" value="{{ u.username }}">
+                </td>
+                <td>
+                  <select name="account_type" class="form-control">
+                    <option value="Admin" {{ 'selected' if u.account_type == 'Admin' else '' }}>Admin</option>
+                    <option value="Manager" {{ 'selected' if u.account_type == 'Manager' else '' }}>Manager</option>
+                    <option value="Assistant Manager" {{ 'selected' if u.account_type == 'Assistant Manager' else '' }}>Assistant Manager</option>
+                    <option value="Employee" {{ 'selected' if u.account_type == 'Employee' else '' }}>Employee</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current password">
+                </td>
+              </form>
+              <td class="action-buttons">
+                <button type="submit" form="update-form-{{ u.id }}" class="btn btn-primary">Save</button>
+                <form action="{{ url_for('delete_user', user_id=u.id) }}" method="POST" style="display:inline; margin-left: 8px;">
+                  <button type="submit" class="btn-icon delete" onclick="return confirm('Are you sure you want to delete user {{ u.username }}? This action cannot be undone.');">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const userMenu = document.querySelector('.user');
+    const dropdown = document.querySelector('.user-dropdown');
+
+    if (userMenu && dropdown) {
+      userMenu.addEventListener('click', () => {
+        dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+      });
+
+      window.addEventListener('click', (e) => {
+        if (!userMenu.contains(e.target)) {
+          dropdown.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
+

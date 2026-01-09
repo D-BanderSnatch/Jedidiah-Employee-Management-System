@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Employee List | Jedidiah Construction</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      background: #f4f6f8;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .report-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 25px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+    .report-header {
+      text-align: center;
+      margin-bottom: 25px;
+      border-bottom: 2px solid #e1e5ee;
+      padding-bottom: 15px;
+    }
+    .report-header h2 {
+      margin: 0;
+      color: #2c3e50;
+    }
+    .report-header .subtitle {
+      color: #7f8c8d;
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .summary-card {
+      background: #f8fafc;
+      padding: 18px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .summary-card h4 {
+      margin: 0;
+      color: #6c7a89;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .summary-card .value {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-top: 8px;
+    }
+    .summary-card .meta {
+      color: #95a5a6;
+      font-size: 0.85rem;
+    }
+    .actions { margin-bottom: 20px; }
+    .actions .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-right: 10px;
+    }
+    .btn-primary { background: #3498db; color: white; }
+    .btn-secondary { background: #95a5a6; color: white; }
+    .project-card {
+      border: 1px solid #e1e5ee;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .project-header-row {
+      background: #f1f5f9;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .project-meta {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      color: #607185;
+      font-size: 0.9rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-status { background: #eaf2ff; color: #2d6cdf; }
+    .badge-assignments { background: #eafaf1; color: #27ae60; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    table th, table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f3f7;
+    }
+    table th {
+      background: #2c3e50;
+      color: white;
+      text-align: left;
+    }
+    table tbody tr:nth-child(even) {
+      background: #f9fbfd;
+    }
+    .no-data {
+      text-align: center;
+      padding: 20px;
+      color: #7f8c8d;
+      font-style: italic;
+    }
+    @media print {
+      body { background: white; }
+      .report-container { box-shadow: none; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+    <div class="report-header">
+      <h2>Project Employee List</h2>
+      <div class="subtitle">
+        Generated on: {{ now.strftime('%Y-%m-%d %H:%M') if now else date.today().isoformat() }}
+      </div>
+    </div>
+
+    <div class="actions no-print">
+      <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+      <button class="btn btn-secondary" onclick="window.history.back()">Back to Reports</button>
+    </div>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <h4>Total Projects</h4>
+        <div class="value">{{ total_projects }}</div>
+        <div class="meta">Projects included</div>
+      </div>
+      <div class="summary-card">
+        <h4>Projects w/ Employees</h4>
+        <div class="value">{{ projects_with_staff }}</div>
+        <div class="meta">Active assignments</div>
+      </div>
+      <div class="summary-card">
+        <h4>Total Assignments</h4>
+        <div class="value">{{ total_assignments }}</div>
+        <div class="meta">Employee-project links</div>
+      </div>
+    </div>
+
+    {% if projects_data %}
+      {% for project in projects_data %}
+        <div class="project-card">
+          <div class="project-header-row">
+            <div>
+              <h3 style="margin:0; color:#2c3e50;">{{ project.project_name }}</h3>
+              <div style="color:#7f8c8d; font-size:0.9rem;">{{ project.project_department or 'No Department' }}</div>
+            </div>
+            <div class="project-meta">
+              <span class="badge badge-status">{{ project.project_status }}</span>
+              <span class="badge badge-assignments">{{ project.employees|length }} Employees</span>
+            </div>
+          </div>
+
+          {% if project.employees %}
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee Name</th>
+                  <th>Department</th>
+                  <th>Position</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for emp in project.employees %}
+                  <tr>
+                    <td>{{ emp.name }}</td>
+                    <td>{{ emp.department or 'N/A' }}</td>
+                    <td>{{ emp.position or 'N/A' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="no-data">No employees assigned to this project.</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="no-data">No project or employee data found.</div>
+    {% endif %}
+  </div>
+</body>
+</html>
