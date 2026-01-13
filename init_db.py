@@ -15,7 +15,7 @@ def init_db():
     conn.autocommit = True
 
     # Read your SQL file
-    sql_file_path = os.path.join(os.path.dirname(__file__), "mydb.sql")
+    sql_file_path = os.path.join(os.path.dirname(__file__), "system_db.sql")
     with open(sql_file_path, "r") as f:
         sql = f.read()
 
@@ -28,3 +28,4 @@ def init_db():
 
 if __name__ == "__main__":
     init_db()
+
