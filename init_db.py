@@ -9,7 +9,7 @@ def init_db():
     conn = psycopg2.connect(DATABASE_URL, sslmode="require")
     conn.autocommit = True  # no need for manual commit
 
-    sql_file_path = os.path.join(os.path.dirname(__file__), "mydb.sql")
+    sql_file_path = os.path.join(os.path.dirname(__file__), "system_db.sql")
     if not os.path.exists(sql_file_path):
         raise FileNotFoundError(f"SQL file not found at {sql_file_path}")
 
@@ -30,3 +30,4 @@ def init_db():
 
 if __name__ == "__main__":
     init_db()
+
